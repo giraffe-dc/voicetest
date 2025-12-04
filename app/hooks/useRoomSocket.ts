@@ -26,8 +26,7 @@ export const useRoomSocket = (roomId: string = '1') => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
-      // Prioritize polling first for broader compatibility, then websocket
-      transports: ['polling', 'websocket'],
+      transports: ['polling'], // Force polling for Vercel compatibility
       autoConnect: true,
       multiplex: true,
     });

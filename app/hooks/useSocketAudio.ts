@@ -23,9 +23,7 @@ export const useSocketAudio = () => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
-      // Enable both WebSocket and polling
-      transports: ['websocket', 'polling'],
-      // Socket.IO client-side configuration
+      transports: ['polling'], // Force polling for Vercel compatibility
       autoConnect: true,
       multiplex: true,
     });
