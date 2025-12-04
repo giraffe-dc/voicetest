@@ -16,6 +16,7 @@ export default function handler(req: SocketRequest, res: NextApiResponse) {
   // Initialize Socket.IO only once
   if (!req.socket.server.io) {
     const io = new SocketIOServer(req.socket.server, {
+      path: '/api/socket/',
       cors: {
         origin: '*',
         methods: ['GET', 'POST'],
