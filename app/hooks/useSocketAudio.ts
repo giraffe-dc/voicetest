@@ -32,7 +32,7 @@ export const useSocketAudio = () => {
     socket.on('connect', () => {
       console.log('[useSocketAudio] Connected to server:', socket.id);
       setIsConnected(true);
-      setClientId(socket.id);
+      setClientId(socket.id as string);
     });
 
     socket.on('audio-update', (data: AudioUpdate) => {

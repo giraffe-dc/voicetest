@@ -34,7 +34,7 @@ export const useRoomSocket = (roomId: string = '1') => {
     socket.on('connect', () => {
       console.log('[useRoomSocket] Connected to server:', socket.id);
       setIsConnected(true);
-      setClientId(socket.id);
+      setClientId(socket.id as string);
 
       // If there is a pending room request, join it now
       const pending = pendingRoomRef.current;
