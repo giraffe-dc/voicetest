@@ -1,31 +1,32 @@
+import { Server as HttpServer } from 'http';
+import { Server as NetServer, Socket } from 'net';
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Server as HTTPServer } from 'http';
-import { Socket as NetSocket } from 'net';
 import { Server as SocketIOServer } from 'socket.io';
 
-// Type definition for Next.js request/response with socket support
-interface SocketRequest extends NextApiRequest {
-  socket: NetSocket & {
-    server: HTTPServer & {
+// Custom Next.js API response type with Socket.IO support
+export type NextApiResponseServerIO = NextApiResponse & {
+  socket: Socket & {
+    server: NetServer & {
       io?: SocketIOServer;
     };
   };
-}
+};
 
-export default function handler(req: SocketRequest, res: NextApiResponse) {
+const rooms = new Map<string, Map<string, any>>();
+
+export default function handler(req: NextApiRequest, res: NextApiResponseServerIO) {
   // Initialize Socket.IO only once
-  if (!req.socket.server.io) {
-    const io = new SocketIOServer(req.socket.server, {
+  if (!res.socket.server.io) {
+    console.log('[Socket.IO] Initializing new Socket.IO server...');
+    const httpServer: HttpServer = res.socket.server as any;
+    const io = new SocketIOServer(httpServer, {
       path: '/api/socket/',
       cors: {
         origin: '*',
         methods: ['GET', 'POST'],
       },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // Keep both for flexibility, polling will be used by Vercel
     });
-
-    // Rooms map: roomId -> Map(clientId -> clientData)
-    const rooms = new Map<string, Map<string, any>>();
 
     io.on('connection', (socket) => {
       console.log(`[Socket.IO] Client connected: ${socket.id}`);
@@ -35,36 +36,19 @@ export default function handler(req: SocketRequest, res: NextApiResponse) {
 
       // Global audio-data (broadcast to all except sender)
       socket.on('audio-data', (data: any) => {
-        // Log incoming audio-data for debugging connectivity
-        try {
-          console.log(`[Socket.IO] audio-data received from ${socket.id}`, {
-            roomId: data?.roomId,
-            timestamp: data?.timestamp || Date.now(),
-            sampleLength: Array.isArray(data?.frequencies) ? data.frequencies.length : undefined,
-          });
-        } catch (err) {
-          console.error('[Socket.IO] Error logging audio-data', err);
-        }
-
         // If roomId is provided, broadcast only to that room
         if (data && data.roomId) {
           const room = data.roomId;
-
-          // Update stored frequencies in the room state if tracked
-          try {
-            if (rooms.has(room)) {
-              const roomClients = rooms.get(room)!;
-              const existing = roomClients.get(socket.id) || {};
-              roomClients.set(socket.id, {
-                ...existing,
-                id: socket.id,
-                deviceType: existing.deviceType || data.deviceType || (socket.handshake.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop'),
-                frequencies: data.frequencies,
-                timestamp: data.timestamp || Date.now(),
-              });
-            }
-          } catch (err) {
-            console.error('[Socket.IO] Error updating room state', err);
+          if (rooms.has(room)) {
+            const roomClients = rooms.get(room)!;
+            const existing = roomClients.get(socket.id) || {};
+            roomClients.set(socket.id, {
+              ...existing,
+              id: socket.id,
+              deviceType: existing.deviceType || data.deviceType || (socket.handshake.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop'),
+              frequencies: data.frequencies,
+              timestamp: data.timestamp || Date.now(),
+            });
           }
 
           socket.broadcast.to(room).emit('audio-update', {
@@ -74,14 +58,10 @@ export default function handler(req: SocketRequest, res: NextApiResponse) {
             deviceType: data.deviceType || 'unknown',
           });
 
-          // Optionally emit a lightweight room-users-update (comment/uncomment as needed)
-          try {
-            const roomClients = rooms.get(room);
-            if (roomClients) {
-              io.to(room).emit('room-users-update', Object.fromEntries(roomClients.entries()));
-            }
-          } catch (err) {
-            console.error('[Socket.IO] Error emitting room-users-update', err);
+          // Optionally emit a lightweight room-users-update
+          const roomClients = rooms.get(room);
+          if (roomClients) {
+            io.to(room).emit('room-users-update', Object.fromEntries(roomClients.entries()));
           }
         } else {
           socket.broadcast.emit('audio-update', {
@@ -131,9 +111,11 @@ export default function handler(req: SocketRequest, res: NextApiResponse) {
       });
     });
 
-    req.socket.server.io = io;
-    console.log('[Socket.IO] initialized on server');
+    res.socket.server.io = io;
+    console.log('[Socket.IO] Server initialized and attached.');
+  } else {
+    console.log('[Socket.IO] Server already attached.');
   }
 
-  res.status(200).json({ message: 'Socket.IO initialized' });
+  res.end();
 }
