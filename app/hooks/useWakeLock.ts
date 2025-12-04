@@ -8,7 +8,7 @@ const useWakeLock = () => {
       try {
         const lock = await navigator.wakeLock.request('screen');
         setWakeLock(lock);
-        console.log('Wake Lock is active.');
+        // console.log('Wake Lock is active.');
       } catch (err: any) {
         console.error(`${err.name}, ${err.message}`);
       }
@@ -21,7 +21,7 @@ const useWakeLock = () => {
     if (wakeLock) {
       await wakeLock.release();
       setWakeLock(null);
-      console.log('Wake Lock has been released.');
+      // console.log('Wake Lock has been released.');
     }
   }, [wakeLock]);
 
