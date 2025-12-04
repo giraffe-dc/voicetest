@@ -20,7 +20,8 @@ export const useRoomSocket = (roomId: string = '1') => {
 
   useEffect(() => {
     // Initialize socket connection once
-    const socket = io(undefined, {
+    const socket = io(undefined as any, {
+      path: '/api/socket/',
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
