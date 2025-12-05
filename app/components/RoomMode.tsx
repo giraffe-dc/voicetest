@@ -18,7 +18,6 @@ export const RoomMode: React.FC<RoomModeProps> = ({ defaultRoomId = '1' }) => {
 
   const audioAnalyzer = useAudioAnalyzer();
   const roomSocket = useRoomSocket(defaultRoomId);
-
   // Detect insecure context (mobile over http) for guidance
   const [isInsecureContext, setIsInsecureContext] = useState(false);
 
